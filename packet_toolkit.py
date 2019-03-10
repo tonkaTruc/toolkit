@@ -17,9 +17,9 @@ class pkt_craft:
 	def __init__(self, interface=None):
 
 		# Configure the host network adapter to use
-		self.selected_interface = self.configure_interface(interface)
-		logging.debug(self.selected_interface)
-		print("Selected interface = %s" % self.selected_interface)
+		self.selected_interface = configure_interface(interface)
+		# logging.debug(self.selected_interface)
+		# DEBUG print("Selected interface = %s" % self.selected_interface)
 
 		# Obtain IP address of host network adapter.
 		# (try except for formatting of win / unix nic data structure))
@@ -33,44 +33,11 @@ class pkt_craft:
 
 		self.current_pcap = None
 
-		print(130*"-")
-		print("Host info:")
-		print("Hostname: {}".format(self.hostname))
-		print("Currently assigned NIC: {}".format(self.selected_interface))
+		print("\nHost info:")
+		print("Hostname: \t\t\t\t\t{}".format(self.hostname))
+		print("Currently assigned NIC: \t{}".format(self.selected_interface))
 		print("Ip address: {}".format(json.dumps(self.ip, indent=4)))
 		print(130*"-")
-
-	def configure_interface(self, interface=None):
-		"""Set the self.selected_interface variable. All actions are performed through this nic"""
-
-		if os.name == "nt":
-			print("Running Windows")
-			nic_info = get_windows_if_list()
-			available_interfaces = [name["netid"] for name in nic_info]
-		elif os.name == "posix":
-			print("Running Linux")
-			available_interfaces = get_if_list()
-
-		print("Available interface list:")
-		print(json.dumps(available_interfaces, indent=4))
-
-		if not interface:
-			interface = input("Enter interface name: ")
-
-		for nic in nic_info:
-			try:
-				if nic["netid"] == interface:
-					print("FOUND THE NIC")
-					print("Nic type is {}".format(type(nic)))
-					print(json.dumps(nic_info, indent=4))
-					return nic
-			except KeyError:
-				if interface == nic.keys():
-					print("FOUND THE NIC THIS WAY")
-					print("Nic type is {}".format(type(nic)))
-					return nic
-				else:
-					logging.error("Failed to find nic dict")
 
 	def capture(self, interface, pkt_count=None):
 
@@ -228,7 +195,7 @@ class pkt_craft:
 		usr_opt = input("\nSelect option: ")
 
 		# Export current .pcap file
-		if usr_opt == "000":
+		if usr_opt == "0":
 			print("Exporting current .pcap var: {}".format(self.current_pcap))
 
 			# Exit to menu if active cap file is empty
@@ -241,13 +208,25 @@ class pkt_craft:
 		if usr_opt == "1":
 			count = input("Enter count to terminate sniff: ")
 			self.capture(self.selected_interface["name"], count)
+
 		elif usr_opt == "2":
-			path = input("Enter full path to target .pcap: ")
-			cap = sniff(offline=path, prn=self.zero_src)
+			cap_store_path = os.path.abspath(os.curdir) + "/cap_store/"
+			print("\nListing local \"cap_store\" directory:\t" + cap_store_path)
+			print(" ")
+			for item in os.listdir(cap_store_path):
+				print("- %s" % item)
+
+			target_filename = input("Enter filename of target .pcap: ")
+			path = os.path.abspath(cap_store_path + target_filename)
+			print(path)
+
+			cap = sniff(offline=path)
 			cap.nsummary()
 
 			self.current_pcap = cap
+
 			self.menu()
+
 		elif usr_opt == "3":
 			self.inspect(mode="iterate")
 			self.menu()
@@ -258,6 +237,10 @@ class pkt_craft:
 
 			def zero_dst(pkt):
 				pkt[Ether].dst = "00:00:00:00:00:00"
+				pkt[Ether].src = "00:00:00:00:00:00"
+
+				pkt[IP].src = "10.0.0.66"
+				pkt[IP].dst = "239.1.2.3"
 				return pkt
 
 			for pkt in self.current_pcap:
@@ -283,6 +266,36 @@ class pkt_craft:
 			self.menu()
 
 
+def configure_interface(interface=None):
+	"""Set the self.selected_interface variable. All actions are performed through this nic"""
+
+	if os.name == "nt":
+		print("Running Windows")
+		nic_info = get_windows_if_list()
+		available_interfaces = [name["netid"] for name in nic_info]
+	elif os.name == "posix":
+		print("Running Linux")
+		available_interfaces = get_if_list()
+
+	if not interface:
+		print("Available interface list:")
+		print(json.dumps(available_interfaces, indent=4))
+
+		interface = input("Enter interface name: ")
+
+	for nic in nic_info:
+		try:
+			if nic["netid"] == interface:
+				# DEBUG print("Nic type is {}".format(type(nic)))
+				# DEBUG print(json.dumps(nic_info, indent=4))
+				return nic
+		except KeyError:
+			if interface == nic.keys():
+				# DEBUG print("Nic type is {}".format(type(nic)))
+				return nic
+			else:
+				logging.error("Failed to find nic dict")
+
 if __name__ == "__main__":
-	krft = pkt_craft("Monitor port")
+	krft = pkt_craft("Ethernet 2")
 	krft.menu()
