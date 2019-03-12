@@ -41,22 +41,30 @@ class pkt_craft:
 
 	def capture(self, interface, pkt_count=None):
 
-		# Reset global counter
 		global packet_counter
-		packet_counter = 0000
+		packet_counter = 0
 
-		global rtp_stamps
-		
-		def count_capture(packet):
+		def count_capture(pkt):
 			global packet_counter
 			packet_counter += 1
 
-			return "{} {}".format(packet_counter-1, packet.summary())
+			return "%s %s" % (packet_counter, pkt.summary())
 
 		# cap = sniff(iface=interface, count=int(pkt_count), prn= lambda x: x.nsummary())
 		# cap = sniff(iface=interface, count=int(pkt_count), prn=count_capture)
-		cap = sniff(iface=interface, count=int(pkt_count), prn=self.on_rx)
-		
+		# cap = sniff(iface=interface, count=int(pkt_count), prn=self.on_rx)
+		try:
+			cap = sniff(iface=interface, count=int(pkt_count), prn=count_capture)
+		except KeyboardInterrupt:
+			return False
+
+		self.current_pcap = cap
+
+		return cap
+
+	def decode_as_rtp(self, pkt):
+		print("Some good stuff in here!")
+		"""
 		previous = 0
 		total_stamp = 0
 		delta = 0
@@ -65,19 +73,20 @@ class pkt_craft:
 			delta = stamp
 			delta = delta - previous
 			previous = stamp
-			
+
 		print("Delta (average) = %s" % delta)
 		print("Total RTP time stamps = %s" % total_stamp)
 		print("Mean = %s" % (total_stamp / len(rtp_stamps)))
-		
-		self.current_pcap = cap
-		self.menu()
+
+		----------------------
 
 		if pkt.haslayer(UDP):
 			udp = pkt[UDP]
 
 		if pkt.haslayer(TCP):
 			tcp = pkt[TCP]
+
+		"""
 
 	def on_rx(self, pkt):
 		global packet_counter
@@ -109,12 +118,6 @@ class pkt_craft:
 				print(".")
 				
 		return pkt.summary()
-
-				
-		# if UDP in pkt:
-		# 	pkt[UDP].src = "00:00:00:00:00:00"
-
-		#return pkt.summary()
 
 	def inspect(self, **kwargs):
 		i = None
@@ -178,92 +181,126 @@ class pkt_craft:
 
 		print(pkt.summary())
 
+	def export_capture(self, file):
+
+		# Exit to menu if active cap file is empty
+		if not self.current_pcap:
+			logging.error("Active cap file is empty... nothing to export")
+			raise TypeError("Cannot save empty capture variable!")
+
+		print("Exporting current .pcap var: {}".format(self.current_pcap))
+		wrpcap(file, self.current_pcap)
+		print("File saved as: {}".format(os.path.abspath(file)))
+
+		return file
+
+	def import_capture(self, file=None):
+		cap_store_path = os.path.abspath(os.curdir) + "/cap_store/"
+
+		if not file:
+			while True:
+				print("Listing directory:\t%s\n" % cap_store_path)
+
+				for item in os.listdir(cap_store_path):
+					print("\t- %s" % item)
+
+				target_filename = input("\nEnter filename of target capture: ")
+				file = os.path.abspath(cap_store_path + target_filename)
+
+				if os.path.exists(file):
+					break
+				else:
+					logging.error("File does not exist: %s " % file)
+					pass
+
+		try:
+			cap = sniff(offline=file)
+		except FileNotFoundError as err:
+			print("File supplied for input does not exist: %s" % file)
+			return False
+
+		cap.nsummary()
+
+		self.current_pcap = cap
+
 	def menu(self):
-		print("\nCurrent capture file stats:\t{} ({})".format(self.current_pcap, type(self.current_pcap)))
-		print("Selected interface:\t\t\t{} ({})".format(self.selected_interface["name"], type(self.selected_interface)))
+		while True:
+			print("\nCurrent capture file stats:\t{} ({})".format(self.current_pcap, type(self.current_pcap)))
+			print("Selected interface:\t\t\t{} ({})\n".format(self.selected_interface["name"], type(self.selected_interface)))
 
-		menu_opts = {
-			"\n1": "Produce new .pcap",
-			"2": "Import .pcap from drive",
-			"3": "Inspect cap file",
-			"4": "Filter current .pcap",
-			"5": "Replay current .pcap",
-			"0": "Export current .pcap"
-		}
-		for opt in menu_opts:
-			print(opt, menu_opts[opt])
-		usr_opt = input("\nSelect option: ")
+			"""
+			Adding new options to menu: 
+				Additional menu options can be added by adding them to <menu_options> list.
+				The position in the list is reflected in its corresponding option number for user entry
+			"""
 
-		# Export current .pcap file
-		if usr_opt == "0":
-			print("Exporting current .pcap var: {}".format(self.current_pcap))
+			menu_options = [
+				"Export current .pcap",
+				"Produce new .pcap",
+				"Import .pcap from drive",
+				"Apply global changes to current capture",
+				"Inspect cap file",
+				"Filter current .pcap",
+				"Replay current .pcap"
+			]
 
-			# Exit to menu if active cap file is empty
-			if not self.current_pcap:
-				logging.error("Active cap file is empty... nothing to export")
+			for item, num in zip(menu_options, [x for x in range(0, len(menu_options))]):
+				print("\t%s: %s" % (num, item))
+			usr_opt = input("\nEnter option number: ")
+
+			# Export current .pcap file
+			if usr_opt == "0":
+				try:
+					self.export_capture(input("Enter filname: "))
+				except TypeError as err:
+					print("You must import or generate a capture in order to save a capture!")
+				continue
+
+			if usr_opt == "1":
+				print("Capturing from currently selected interface...")
+				count = input("Enter number of packets to capture: ")
+				self.capture(self.selected_interface["name"], count)
+				continue
+
+			elif usr_opt == "2":
+				self.import_capture(input("Enter path or press enter to list default directory: "))
+				continue
+
+			elif usr_opt == "3":
+				self.inspect(mode="iterate")
 				self.menu()
 
-			wrpcap("exported_cap_file.pcap", self.current_pcap)
+			elif usr_opt == "4":
+				print("FILTER")
+			elif usr_opt == "5":
 
-		if usr_opt == "1":
-			count = input("Enter count to terminate sniff: ")
-			self.capture(self.selected_interface["name"], count)
+				def zero_dst(pkt):
+					pkt[Ether].dst = "00:00:00:00:00:00"
+					pkt[Ether].src = "00:00:00:00:00:00"
 
-		elif usr_opt == "2":
-			cap_store_path = os.path.abspath(os.curdir) + "/cap_store/"
-			print("\nListing local \"cap_store\" directory:\t" + cap_store_path)
-			print(" ")
-			for item in os.listdir(cap_store_path):
-				print("- %s" % item)
+					pkt[IP].src = "10.0.0.66"
+					pkt[IP].dst = "239.1.2.3"
+					return pkt
 
-			target_filename = input("Enter filename of target .pcap: ")
-			path = os.path.abspath(cap_store_path + target_filename)
-			print(path)
+				for pkt in self.current_pcap:
+					zero_dst(pkt)
 
-			cap = sniff(offline=path)
-			cap.nsummary()
+				sendp(self.current_pcap, iface=self.selected_interface["name"])
 
-			self.current_pcap = cap
-
-			self.menu()
-
-		elif usr_opt == "3":
-			self.inspect(mode="iterate")
-			self.menu()
-
-		elif usr_opt == "4":
-			print("FILTER")
-		elif usr_opt == "5":
-
-			def zero_dst(pkt):
-				pkt[Ether].dst = "00:00:00:00:00:00"
-				pkt[Ether].src = "00:00:00:00:00:00"
-
-				pkt[IP].src = "10.0.0.66"
-				pkt[IP].dst = "239.1.2.3"
-				return pkt
-
-			for pkt in self.current_pcap:
-				zero_dst(pkt)
-
-			sendp(self.current_pcap, iface=self.selected_interface["name"])
-
-			# for pkt in self.current_pcap:
-			# 	print(pkt[Ether].dst)
-			# 	# Zero dst MAC address
-			# 	pkt[Ether].dst = "00:00:00:00:00:00"
-			#
-			# 	print(pkt.summary())
-			# 	print(pkt[Ether].dst)
-			#
-			# 	# Send the packet
-			# 	# FIXME: This will probably not work for linux... needs testing
-			# 	try:
-			# 		sendp(pkt, iface=self.selected_interface["name"])
-			# 	except ValueError as err:
-			# 		logging.error("Cound not send the packet... sendp os: " + str(err))
-
-			self.menu()
+				# for pkt in self.current_pcap:
+				# 	print(pkt[Ether].dst)
+				# 	# Zero dst MAC address
+				# 	pkt[Ether].dst = "00:00:00:00:00:00"
+				#
+				# 	print(pkt.summary())
+				# 	print(pkt[Ether].dst)
+				#
+				# 	# Send the packet
+				# 	# FIXME: This will probably not work for linux... needs testing
+				# 	try:
+				# 		sendp(pkt, iface=self.selected_interface["name"])
+				# 	except ValueError as err:
+				# 		logging.error("Cound not send the packet... sendp os: " + str(err))
 
 
 def configure_interface(interface=None):
