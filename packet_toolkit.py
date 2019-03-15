@@ -265,15 +265,82 @@ class pkt_craft:
 			elif usr_opt == "2":
 				self.import_capture(input("Enter path or press enter to list default directory: "))
 				continue
-
+		
+			# Apply global to packkets
 			elif usr_opt == "3":
-				self.inspect(mode="iterate")
-				self.menu()
+				print(" ")
+				
+				def global_pkt_change(layer, param, value, rtp_flag=None):
+					
+					if layer.lower() == "ip":						
+						for pkt in self.current_pcap:
+							if pkt.haslayer(IP):
+						
+								if param.lower() == "src":
+									pkt[IP].src = value
+									
+								elif param.lower() == "dst":
+									pkt[IP].dst = value
 
+								
+						return layer, param, value
+						
+					elif layer.lower() == "mac":
+						for pkt in self.current_pcap:
+							if pkt.haslayer(Ether):
+								
+								if param.lower() == "src":
+									pkt[Ether].src = value
+									print(pkt.summary())
+
+								elif param.lower() == "dst":
+									pkt[Ether].dst = value
+									print(pkt.summary())
+								
+						return layer, param, value
+					
+					# Needs plumbing in!
+					if rtp_flag:
+						# Force UDP payload to be interpreted as RTP
+						if UDP in pkt:
+							pkt[UDP].payload = RTP(pkt[Raw].load)
+								
+						if RTP in pkt:
+							pkt[RTP].payload_type = 97
+							# print(pkt[RTP].timestamp)
+
+				cmd = None
+				cmd_list = []
+				print("<ip src 0.0.0.0 / mac src 00:00:00:00:00:00>")
+				while True:
+					cmd = input("Enter global packet parameters. \"end\" to exit: ")
+					
+					if cmd == "end":
+						break
+					
+					cmd_list.append(cmd)
+						
+				for cmd in cmd_list:
+					if len(cmd.split(" ")) == 3:
+						layer, param, value = cmd.split(" ")
+						print("Settings applied: \t" + str(global_pkt_change(layer, param, value)))
+					else:
+						print("Incorrectly formatted cmd: \t%s" % cmd)
+						break
+				continue
+					
+						
 			elif usr_opt == "4":
-				print("FILTER")
-			elif usr_opt == "5":
+				self.inspect(mode="iterate")
+				continue
 
+			
+			elif usr_opt == "5":
+				print("FILTER")
+				continue
+			
+			elif usr_opt == "6":
+				
 				def zero_dst(pkt):
 					pkt[Ether].dst = "00:00:00:00:00:00"
 					pkt[Ether].src = "00:00:00:00:00:00"
@@ -286,6 +353,7 @@ class pkt_craft:
 					zero_dst(pkt)
 
 				sendp(self.current_pcap, iface=self.selected_interface["name"])
+
 
 				# for pkt in self.current_pcap:
 				# 	print(pkt[Ether].dst)
@@ -334,5 +402,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft("Ethernet 2")
+	krft = pkt_craft("ConnectX-5 1")
 	krft.menu()
