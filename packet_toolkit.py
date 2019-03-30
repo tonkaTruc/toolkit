@@ -18,7 +18,7 @@ class pkt_craft:
 
 		# Configure the host network adapter to use
 		self.selected_interface = configure_interface(interface)
-		# logging.debug(self.selected_interface)
+		logging.debug(self.selected_interface)
 		# DEBUG print("Selected interface = %s" % self.selected_interface)
 
 		# Obtain IP address of host network adapter.
@@ -62,8 +62,49 @@ class pkt_craft:
 
 		return cap
 
-	def decode_as_rtp(self, pkt):
-		print("Some good stuff in here!")
+	def force_rtp(self):
+		"""Iterate through self.capture and force all UDP packets to decode as RTP"""
+
+		no_raw = 0
+		rtp_detected = 0
+		for pkt in self.current_pcap:
+			# Force UDP payload to be interpreted as RTP
+			if pkt.haslayer(UDP):
+				try:
+					pkt[UDP].payload = RTP(pkt[Raw].load)
+				except IndexError:
+					no_raw += 1
+					print(pkt.summary)
+
+			if RTP in pkt:
+				rtp_detected += 1
+
+		print("\nNumber of packets decoded as RTP: %s" % rtp_detected)
+		print("Number of packets that do not contain raw data: %s" % no_raw)
+
+	def get_rtp_timestamps(self):
+
+		valid_pkt_num = 0
+		valid_timestamp = []
+		previous_stamp = 0
+
+		no_rtp_pkt = 0
+
+		for pkt in self.current_pcap:
+			if pkt.haslayer(RTP):
+				valid_pkt_num += 1
+				valid_timestamp.append(pkt[RTP].timestamp)
+			else:
+				no_rtp_pkt += 0
+
+		for stamp in valid_timestamp:
+
+			current_stamp = stamp
+			delta = current_stamp - previous_stamp
+			previous_stamp = stamp
+
+			print(stamp, delta)
+
 		"""
 		previous = 0
 		total_stamp = 0
@@ -99,7 +140,7 @@ class pkt_craft:
 		# print(pkt.show())
 		# print("\n" + str(pkt[Raw]))
 		if IP in pkt:
-			pkt[IP].src = "0.0.0.0"
+			scap
 			pkt[IP].dst = "0.0.0.0"
 		
 		# Force UDP payload to be interpreted as RTP
@@ -266,52 +307,68 @@ class pkt_craft:
 				self.import_capture(input("Enter path or press enter to list default directory: "))
 				continue
 		
-			# Apply global to packkets
+			# Apply global to packets
 			elif usr_opt == "3":
 				print(" ")
 				
-				def global_pkt_change(layer, param, value, rtp_flag=None):
-					
-					if layer.lower() == "ip":						
+				def global_pkt_change(layer, param, value):
+					"""Iterate through every packet in self.capture and apply global settings basrd on arguments
+					provided
+
+					:argument layer
+					:type string
+
+					:argument param
+					:type string
+
+					:argument value
+					:type string
+					"""
+					no_layer_count = 0
+					applied_count = 0
+
+					# If cmd beings "ip"
+					if layer.lower() == "ip":
 						for pkt in self.current_pcap:
 							if pkt.haslayer(IP):
-						
+								applied_count += 1
+
 								if param.lower() == "src":
 									pkt[IP].src = value
 									
 								elif param.lower() == "dst":
 									pkt[IP].dst = value
+							else:
+								logging.info("Packet does not have IP layer: %s" % pkt.summary)
+								no_layer_count += 1
 
-								
+						print("Parameters applied to %s packets. %s packets did not contain the target layer and have "
+								"not been changed" % (applied_count, no_layer_count))
+
 						return layer, param, value
-						
-					elif layer.lower() == "mac":
+
+					# If cmd begins "mac"
+					elif layer.lower() == "eth":
 						for pkt in self.current_pcap:
 							if pkt.haslayer(Ether):
-								
+								applied_count += 1
+
 								if param.lower() == "src":
 									pkt[Ether].src = value
-									print(pkt.summary())
 
 								elif param.lower() == "dst":
 									pkt[Ether].dst = value
-									print(pkt.summary())
-								
-						return layer, param, value
-					
-					# Needs plumbing in!
-					if rtp_flag:
-						# Force UDP payload to be interpreted as RTP
-						if UDP in pkt:
-							pkt[UDP].payload = RTP(pkt[Raw].load)
-								
-						if RTP in pkt:
-							pkt[RTP].payload_type = 97
-							# print(pkt[RTP].timestamp)
 
-				cmd = None
+							else:
+								logging.info("Packet does not have Ethernet layer: %s" % pkt.summary)
+
+						print("Parameters applied to %s packets. %s packets did not contain the target layer and have "
+								"not been changed" % (applied_count, no_layer_count))
+
+						return layer, param, value
+
 				cmd_list = []
-				print("<ip src 0.0.0.0 / mac src 00:00:00:00:00:00>")
+				print("<ip src 0.0.0.0 / eth src 00:00:00:00:00:00>")
 				while True:
 					cmd = input("Enter global packet parameters. \"end\" to exit: ")
 					
@@ -323,10 +380,10 @@ class pkt_craft:
 				for cmd in cmd_list:
 					if len(cmd.split(" ")) == 3:
 						layer, param, value = cmd.split(" ")
-						print("Settings applied: \t" + str(global_pkt_change(layer, param, value)))
+						print("\nApplying settings: %s" % cmd)
+						global_pkt_change(layer, param, value)
 					else:
 						print("Incorrectly formatted cmd: \t%s" % cmd)
-						break
 				continue
 					
 						
@@ -334,13 +391,47 @@ class pkt_craft:
 				self.inspect(mode="iterate")
 				continue
 
-			
 			elif usr_opt == "5":
-				print("FILTER")
+
+				print("\"force rtp\": Force all UDP packets to be decoded as RTP protocol"
+						"\"get rtp timestamps\": Calculate delta between all valid RTP packets")
+
+				cmd_list = []
+
+				while True:
+					cmd = input("Enter filter commands. \"end\" to exit and apply: ")
+
+					if cmd == "end":
+						break
+
+					cmd_list.append(cmd)
+
+				for cmd in cmd_list:
+					if cmd == "force rtp":
+						self.force_rtp()
+					elif cmd == "get rtp timestamps":
+						self.get_rtp_timestamps()
+					else:
+						print("Unrecognised command: %s" % cmd)
+
 				continue
-			
+
 			elif usr_opt == "6":
-				
+				replay_opts = [
+					"Reliable replay (TCP)",
+					"Un-reliable replay (UDP)"
+				]
+				print(" ")
+				for opt, num in zip(replay_opts, [x for x in range(0, len(replay_opts))]):
+					print("\t%s: %s" % (num, opt))
+
+				usr_opt = input("\nSelect replay type: ")
+
+				if usr_opt == "0":
+					sr(self.current_pcap)
+				elif usr_opt == "2":
+					sendp(self.current_pcap, iface=self.selected_interface["name"])
+
 				def zero_dst(pkt):
 					pkt[Ether].dst = "00:00:00:00:00:00"
 					pkt[Ether].src = "00:00:00:00:00:00"
@@ -349,10 +440,9 @@ class pkt_craft:
 					pkt[IP].dst = "239.1.2.3"
 					return pkt
 
-				for pkt in self.current_pcap:
-					zero_dst(pkt)
+				# for pkt in self.current_pcap:
+				# 	zero_dst(pkt)
 
-				sendp(self.current_pcap, iface=self.selected_interface["name"])
 
 
 				# for pkt in self.current_pcap:
@@ -372,7 +462,7 @@ class pkt_craft:
 
 
 def configure_interface(interface=None):
-	"""Set the self.selected_interface variable. All actions are performed through this nic"""
+	"""Gather list of available network interfaces and return NIC information in dict format"""
 
 	if os.name == "nt":
 		print("Running Windows")
@@ -402,5 +492,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft("ConnectX-5 1")
+	krft = pkt_craft("WiFi")
 	krft.menu()
