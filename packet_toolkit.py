@@ -502,13 +502,13 @@ def configure_interface(interface=None):
 		interface = input("Enter interface name: ")
 
 	for nic, info in nic_info.items():
-		# print({nic: info})
+		print(nic, info)
 		try:
 			if nic == interface:
-				print(json.dumps({nic: info}, indent=4))
+				print(json.dumps(info, indent=4))
 				return info
 		except TypeError:
-			print(nic, info)
+			print(info)
 			if interface == nic:
 				print("Nic info type is {}".format(type(info)))
 				return info
@@ -516,5 +516,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft("Mellanox ConnectX-5 Adapter #2")
+	krft = pkt_craft()
 	krft.menu()
