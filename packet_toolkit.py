@@ -25,7 +25,7 @@ class pkt_craft:
 		# (try except for formatting of win / unix nic data structure))
 		try:
 			self.ip = netifaces.ifaddresses(self.selected_interface["guid"])
-		except KeyError:
+		except TypeError:
 			self.ip = netifaces.ifaddresses(self.selected_interface)
 
 		# Get hostname
@@ -267,8 +267,10 @@ class pkt_craft:
 	def menu(self):
 		while True:
 			print("\nCurrent capture file stats:\t{} ({})".format(self.current_pcap, type(self.current_pcap)))
-			print("Selected interface:\t\t\t{} ({})\n".format(self.selected_interface["name"], type(self.selected_interface)))
-
+			try:
+				print("Selected interface:\t\t\t{} ({})\n".format(self.selected_interface["name"], type(self.selected_interface)))
+			except TypeError:
+				print("Selected Interface \t\t\t%s (%s)\n" % (self.selected_interface, type(self.selected_interface)))
 			"""
 			Adding new options to menu: 
 				Additional menu options can be added by adding them to <menu_options> list.
@@ -470,7 +472,17 @@ def configure_interface(interface=None):
 		available_interfaces = [name["netid"] for name in nic_info]
 	elif os.name == "posix":
 		print("Running Linux")
-		available_interfaces = get_if_list()
+		available_interfaces = [x for x in get_if_list()]
+		print(available_interfaces)
+
+		nic_info = {}
+
+		for int_name in available_interfaces:
+			try:
+				nic_info[int_name] = netifaces.ifaddresses(int_name)[netifaces.AF_INET]
+			except KeyError:
+				print("No IPv4 address assigned to NIC %s... " % int_name)
+	print(json.dumps(nic_info, indent=4))
 
 	if not interface:
 		print("Available interface list:")
@@ -478,19 +490,20 @@ def configure_interface(interface=None):
 
 		interface = input("Enter interface name: ")
 
-	for nic in nic_info:
+	for nic, info in nic_info.items():
 		try:
 			if nic["netid"] == interface:
 				# DEBUG print("Nic type is {}".format(type(nic)))
 				# DEBUG print(json.dumps(nic_info, indent=4))
 				return nic
-		except KeyError:
-			if interface == nic.keys():
-				# DEBUG print("Nic type is {}".format(type(nic)))
-				return nic
+		except TypeError:
+			print(nic, info)
+			if interface == nic:
+				print("Nic info type is {}".format(type(info)))
+				return info
 			else:
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft("WiFi")
+	krft = pkt_craft()
 	krft.menu()
