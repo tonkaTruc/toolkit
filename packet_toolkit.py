@@ -14,21 +14,16 @@ rtp_stamps = []
 
 class pkt_craft:
 
-	def __init__(self, interface=None):
+	def __init__(self, capture_interface=None, replay_interface=None):
 
 		# Configure the host network adapter to use
-		self.selected_interface = configure_interface(interface)
-		logging.debug(self.selected_interface)
-		# DEBUG print("Selected interface = %s" % self.selected_interface)
-
-		# Obtain IP address of host network adapter.
-		# (try except for formatting of win / unix nic data structure))
+		print("Configure capture interface")
+		self.capture_interface = configure_interface(capture_interface)
+		logging.debug("Capture interface set as: %s" % self.capture_interface)
 		
-		# self.interface_name = k
-		# self.ip = self.selected_interface["addr"]
-		# self.netmask = self.selected_interface["netmask"]
-		# self.broadcast_addr = self.selected_interface["broadcast"]
-		# self.interface_guid = self.selected_interface["guid"]
+		print("Configure replay interface")
+		self.replay_interface = configure_interface(replay_interface)
+		logging.debug("Replay interface set as: %s" % self.capture_interface)
 
 
 		# Get hostname
@@ -38,11 +33,11 @@ class pkt_craft:
 
 		print("\nHost info:")
 		print("Hostname: \t\t\t{}".format(self.hostname))
-		print("Currently assigned NIC: \t{}".format(self.selected_interface))
-		print("Ip address: \t\t\t{}".format(self.selected_interface["addr"]))
+		print("Assigned capture NIC: \t\t{}".format(self.capture_interface))
+		print("Assigned replay NIC: \t\t{}".format(self.replay_interface))
 		print(130*"-")
 
-	def capture(self, interface, pkt_count=None):
+	def capture(self, pkt_count=None):
 
 		global packet_counter
 		packet_counter = 0
@@ -57,7 +52,7 @@ class pkt_craft:
 		# cap = sniff(iface=interface, count=int(pkt_count), prn=count_capture)
 		# cap = sniff(iface=interface, count=int(pkt_count), prn=self.on_rx)
 		try:
-			cap = sniff(iface=interface, count=int(pkt_count), prn=count_capture)
+			cap = sniff(iface=self.capture_interface["name"], count=int(pkt_count), prn=count_capture)
 		except KeyboardInterrupt:
 			return False
 
@@ -270,7 +265,8 @@ class pkt_craft:
 	def menu(self):
 		while True:
 			print("\nCurrent capture file stats:\t{} ({})".format(self.current_pcap, type(self.current_pcap)))
-			print("Selected interface:\t\t{} ({})\n".format(self.selected_interface, type(self.selected_interface)))
+			print("Capture interface:\t\t%s\n" % self.capture_interface)
+			print("Replay interface:\t\t%s\n" % self.replay_interface)
 			"""
 			Adding new options to menu: 
 				Additional menu options can be added by adding them to <menu_options> list.
@@ -302,7 +298,7 @@ class pkt_craft:
 			if usr_opt == "1":
 				print("Capturing from currently selected interface...")
 				count = input("Enter number of packets to capture: ")
-				self.capture(self.selected_interface["name"], count)
+				self.capture(count)
 				continue
 
 			elif usr_opt == "2":
@@ -432,7 +428,7 @@ class pkt_craft:
 				if usr_opt == "0":
 					sr(self.current_pcap)
 				elif usr_opt == "2":
-					sendp(self.current_pcap, iface=self.selected_interface["name"])
+					sendp(self.current_pcap, iface=self.replay_interface["name"])
 
 				def zero_dst(pkt):
 					pkt[Ether].dst = "00:00:00:00:00:00"
@@ -502,10 +498,8 @@ def configure_interface(interface=None):
 		interface = input("Enter interface name: ")
 
 	for nic, info in nic_info.items():
-		print(nic, info)
 		try:
 			if nic == interface:
-				print(json.dumps(info, indent=4))
 				return info
 		except TypeError:
 			print(info)
@@ -516,5 +510,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft()
+	krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
 	krft.menu()
