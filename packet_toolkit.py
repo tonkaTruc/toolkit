@@ -468,12 +468,22 @@ def configure_interface(interface=None):
 
 	if os.name == "nt":
 		print("Running Windows")
-		nic_info = get_windows_if_list()
-		available_interfaces = [name["netid"] for name in nic_info]
+		
+		# Produce a dict of interface names and guid values for all interfaces
+		available_interfaces = {name["name"]: name["guid"] for name in get_windows_if_list()}
+		
+		nic_info = {}
+		
+		for int_name, int_guid in available_interfaces.items():
+			try:
+				nic_info[int_name] = netifaces.ifaddresses(int_guid)[netifaces.AF_INET][0]
+				nic_info[int_name].update({"guid": int_guid)
+			except KeyError:
+				print("No IPv4 address assigned to NIC %s" % int_name)
+		
 	elif os.name == "posix":
 		print("Running Linux")
 		available_interfaces = [x for x in get_if_list()]
-		print(available_interfaces)
 
 		nic_info = {}
 
@@ -482,20 +492,18 @@ def configure_interface(interface=None):
 				nic_info[int_name] = netifaces.ifaddresses(int_name)[netifaces.AF_INET]
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s... " % int_name)
+	
 	print(json.dumps(nic_info, indent=4))
 
 	if not interface:
-		print("Available interface list:")
-		print(json.dumps(available_interfaces, indent=4))
-
 		interface = input("Enter interface name: ")
 
 	for nic, info in nic_info.items():
+		# print({nic: info})
 		try:
-			if nic["netid"] == interface:
-				# DEBUG print("Nic type is {}".format(type(nic)))
-				# DEBUG print(json.dumps(nic_info, indent=4))
-				return nic
+			if nic == interface:
+				print(json.dumps({nic: info}, indent=4))
+				return {nic: info}
 		except TypeError:
 			print(nic, info)
 			if interface == nic:
