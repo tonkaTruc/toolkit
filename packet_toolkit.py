@@ -23,10 +23,13 @@ class pkt_craft:
 
 		# Obtain IP address of host network adapter.
 		# (try except for formatting of win / unix nic data structure))
-		try:
-			self.ip = netifaces.ifaddresses(self.selected_interface["guid"])
-		except TypeError:
-			self.ip = netifaces.ifaddresses(self.selected_interface)
+		
+		# self.interface_name = k
+		# self.ip = self.selected_interface["addr"]
+		# self.netmask = self.selected_interface["netmask"]
+		# self.broadcast_addr = self.selected_interface["broadcast"]
+		# self.interface_guid = self.selected_interface["guid"]
+
 
 		# Get hostname
 		self.hostname = socket.gethostname()
@@ -34,9 +37,9 @@ class pkt_craft:
 		self.current_pcap = None
 
 		print("\nHost info:")
-		print("Hostname: \t\t\t\t\t{}".format(self.hostname))
+		print("Hostname: \t\t\t{}".format(self.hostname))
 		print("Currently assigned NIC: \t{}".format(self.selected_interface))
-		print("Ip address: {}".format(json.dumps(self.ip, indent=4)))
+		print("Ip address: \t\t\t{}".format(self.selected_interface["addr"]))
 		print(130*"-")
 
 	def capture(self, interface, pkt_count=None):
@@ -267,10 +270,7 @@ class pkt_craft:
 	def menu(self):
 		while True:
 			print("\nCurrent capture file stats:\t{} ({})".format(self.current_pcap, type(self.current_pcap)))
-			try:
-				print("Selected interface:\t\t\t{} ({})\n".format(self.selected_interface["name"], type(self.selected_interface)))
-			except TypeError:
-				print("Selected Interface \t\t\t%s (%s)\n" % (self.selected_interface, type(self.selected_interface)))
+			print("Selected interface:\t\t{} ({})\n".format(self.selected_interface, type(self.selected_interface)))
 			"""
 			Adding new options to menu: 
 				Additional menu options can be added by adding them to <menu_options> list.
@@ -477,7 +477,8 @@ def configure_interface(interface=None):
 		for int_name, int_guid in available_interfaces.items():
 			try:
 				nic_info[int_name] = netifaces.ifaddresses(int_guid)[netifaces.AF_INET][0]
-				nic_info[int_name].update({"guid": int_guid)
+				nic_info[int_name].update({"guid": int_guid})
+				nic_info[int_name].update({"name": int_name})
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s" % int_name)
 		
@@ -489,7 +490,9 @@ def configure_interface(interface=None):
 
 		for int_name in available_interfaces:
 			try:
-				nic_info[int_name] = netifaces.ifaddresses(int_name)[netifaces.AF_INET]
+				nic_info[int_name] = netifaces.ifaddresses(int_name)[netifaces.AF_INET][0]
+				nic_info[int_name].update({"guid": None})
+				nic_info[int_name].update({"name": int_name})
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s... " % int_name)
 	
@@ -503,7 +506,7 @@ def configure_interface(interface=None):
 		try:
 			if nic == interface:
 				print(json.dumps({nic: info}, indent=4))
-				return {nic: info}
+				return info
 		except TypeError:
 			print(nic, info)
 			if interface == nic:
@@ -513,5 +516,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft()
+	krft = pkt_craft("Mellanox ConnectX-5 Adapter #2")
 	krft.menu()
