@@ -8,6 +8,8 @@ import netifaces
 import subprocess
 import time
 
+from custom_headers import erspan, PTP
+
 packet_counter = 0
 current_rtp_time = 0
 rtp_stamps = []
@@ -18,10 +20,16 @@ class pkt_craft:
 
 		# Configure the host network adapter to use
 		print("Configure capture interface")
+
+		if capture_interface:
+			print("Capture interface supplied as: %s" % capture_interface)
 		self.capture_interface = configure_interface(capture_interface)
 		logging.debug("Capture interface set as: %s" % self.capture_interface)
-		
+
 		print("Configure replay interface")
+
+		if replay_interface:
+			print("Replay interface supplied as: %s" % replay_interface)
 		self.replay_interface = configure_interface(replay_interface)
 		logging.debug("Replay interface set as: %s" % self.capture_interface)
 
@@ -164,6 +172,11 @@ class pkt_craft:
 		if kwargs.get("mode") == "iterate":
 			pkt_start_num = input("Enter packet number to start inspection: ")
 			for p in self.current_pcap[int(pkt_start_num):]:
+
+				try:
+					ERSPAN in p
+				except:
+					print("GOT ERROR")
 				print(90*"-")
 				p.show()
 				hexdump(p)
@@ -510,5 +523,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
+	krft = pkt_craft("enp4s0f1np1")
 	krft.menu()
