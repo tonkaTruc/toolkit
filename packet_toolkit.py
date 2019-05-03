@@ -164,11 +164,25 @@ class pkt_craft:
 		if kwargs.get("mode") == "iterate":
 			pkt_start_num = input("Enter packet number to start inspection: ")
 			for p in self.current_pcap[int(pkt_start_num):]:
-				print(90*"-")
+
+				try:
+					ERSPAN in p
+				except:
+					print("GOT ERROR")
+
+				print(90 * "-")
 				p.show()
 				hexdump(p)
-				print(90*"-")
-				i = input("... ")
+				print(90 * "-")
+
+				menu = [
+					"Exit to menu: \"exit\"",
+					"Next packet: <Enter>",
+					"Alter the packet: \"change\"",
+				]
+
+				print(" | ".join(x for x in menu))
+				i = input("[CMD]:")
 
 				# Escape the loop back to menu
 				if i == "exit":
