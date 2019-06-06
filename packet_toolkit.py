@@ -8,8 +8,6 @@ import netifaces
 import subprocess
 import time
 
-from custom_headers import erspan, PTP
-
 packet_counter = 0
 current_rtp_time = 0
 rtp_stamps = []
@@ -20,16 +18,10 @@ class pkt_craft:
 
 		# Configure the host network adapter to use
 		print("Configure capture interface")
-
-		if capture_interface:
-			print("Capture interface supplied as: %s" % capture_interface)
 		self.capture_interface = configure_interface(capture_interface)
 		logging.debug("Capture interface set as: %s" % self.capture_interface)
-
+		
 		print("Configure replay interface")
-
-		if replay_interface:
-			print("Replay interface supplied as: %s" % replay_interface)
 		self.replay_interface = configure_interface(replay_interface)
 		logging.debug("Replay interface set as: %s" % self.capture_interface)
 
@@ -167,71 +159,32 @@ class pkt_craft:
 		return pkt.summary()
 
 	def inspect(self, **kwargs):
-		i = None
 
 		if kwargs.get("mode") == "iterate":
+
 			pkt_start_num = input("Enter packet number to start inspection: ")
 			for p in self.current_pcap[int(pkt_start_num):]:
-
-				try:
-					ERSPAN in p
-				except:
-					print("GOT ERROR")
 				print(90*"-")
 				p.show()
 				hexdump(p)
 				print(90*"-")
-				i = input("... ")
+
+				menu = [
+					"Exit to menu: \"exit\"",
+					"Next packet: <Enter>",
+					"Alter the packet: \"change\"",
+				]
+
+				print(" | ".join(x for x in menu))
+				i = input("[CMD]:")
 
 				# Escape the loop back to menu
 				if i == "exit":
 					self.menu()
 				elif i == "change":
-					self.manipulate(p)
+					manipulate_packet(p)
 				else:
 					continue
-
-	def manipulate(self, pkt):
-		print(pkt.summary())
-		packet_info = ls(pkt)
-		print(type(packet_info))
-		print("\n\n")
-
-		print(pkt[Ether])
-		print(pkt[IP])
-
-		print(pkt[Ether].hide_defaults())
-		print(pkt[IP].hide_defaults())
-
-		manipulation_opt = {
-			"1": "Zero all source values"
-		}
-		for k, v in manipulation_opt.items():
-			print(k, v)
-		usr_opt = input("Enter manipulation preset: ")
-
-		if usr_opt == "1":
-
-			# Attempt to reset IP and MAC source addresses
-			try:
-				print("IP src was: {}".format(pkt[IP].src))
-				pkt[IP].src = "0.0.0.0"
-				print("IP src now: {}".format(pkt[IP].src))
-			except IndexError as err:
-				logging.warning(err)
-
-			try:
-				print("\nMAC src was: {}".format(pkt[Ether].src))
-				pkt[Ether].src = "00:00:00:00:00:00"
-				print("MAC src now: {}".format(pkt[Ether].src))
-			except IndexError as err:
-				logging.warning(err)
-
-		print("Layer 2: src {}\t dst {}".format(pkt[Ether].src, pkt[Ether].dst))
-		print("Layer 3: src {}\t\t dst {}".format(pkt[IP].src, pkt[IP].dst))
-		print(pkt.command())
-
-		print(pkt.summary())
 
 	def export_capture(self, file):
 
@@ -323,7 +276,7 @@ class pkt_craft:
 				print(" ")
 				
 				def global_pkt_change(layer, param, value):
-					"""Iterate through every packet in self.capture and apply global settings basrd on arguments
+					"""Iterate through every packet in self.capture and apply global settings based on arguments
 					provided
 
 					:argument layer
@@ -341,20 +294,19 @@ class pkt_craft:
 					# If cmd beings "ip"
 					if layer.lower() == "ip":
 						for pkt in self.current_pcap:
+
 							if pkt.haslayer(IP):
 								applied_count += 1
 
 								if param.lower() == "src":
 									pkt[IP].src = value
-									
 								elif param.lower() == "dst":
 									pkt[IP].dst = value
 							else:
 								logging.info("Packet does not have IP layer: %s" % pkt.summary)
 								no_layer_count += 1
 
-						print("Parameters applied to %s packets. %s packets did not contain the target layer and have "
-								"not been changed" % (applied_count, no_layer_count))
+						print("Parameters applied to %s packets. %s packets unaffected" % (applied_count, no_layer_count))
 
 						return layer, param, value
 
@@ -372,9 +324,9 @@ class pkt_craft:
 
 							else:
 								logging.info("Packet does not have Ethernet layer: %s" % pkt.summary)
+								no_layer_count += 1
 
-						print("Parameters applied to %s packets. %s packets did not contain the target layer and have "
-								"not been changed" % (applied_count, no_layer_count))
+						print("Parameters applied to %s packets. %s packets unaffected" % (applied_count, no_layer_count))
 
 						return layer, param, value
 
@@ -522,6 +474,58 @@ def configure_interface(interface=None):
 			else:
 				logging.error("Failed to find nic dict")
 
+def manipulate_packet(pkt):
+	"""
+	Display and allow user to alter any field from any layer of the supplied packet.
+	Return the affected packet
+
+	Future:
+			- Allow user to apply the changes globally to all similar packets in self.capture
+			- Create presets to aid manipulation per host (auto apply IP layer source field to host pc IP addr etc)
+
+	:param pkt:
+	:return changed_pkt:
+	"""
+
+	print(pkt.summary())
+	ls(pkt)
+	print("\n\n")
+
+	print(pkt[Ether])
+	print(pkt[IP])
+
+	manipulation_opt = {
+		"1": "Zero all source values"
+	}
+	for k, v in manipulation_opt.items():
+		print(k, v)
+	usr_opt = input("Enter manipulation preset: ")
+
+	if usr_opt == "1":
+
+		# Attempt to reset IP and MAC source addresses
+		try:
+			print("IP src was: {}".format(pkt[IP].src))
+			pkt[IP].src = "0.0.0.0"
+			print("IP src now: {}".format(pkt[IP].src))
+		except IndexError as err:
+			logging.warning(err)
+
+		try:
+			print("\nMAC src was: {}".format(pkt[Ether].src))
+			pkt[Ether].src = "00:00:00:00:00:00"
+			print("MAC src now: {}".format(pkt[Ether].src))
+		except IndexError as err:
+			logging.warning(err)
+
+	print("Layer 2: src {}\t dst {}".format(pkt[Ether].src, pkt[Ether].dst))
+	print("Layer 3: src {}\t\t dst {}".format(pkt[IP].src, pkt[IP].dst))
+	print(pkt.command())
+
+	print(pkt.summary())
+
 if __name__ == "__main__":
-	krft = pkt_craft("enp4s0f1np1")
+	# krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
+	krft = pkt_craft()
+
 	krft.menu()

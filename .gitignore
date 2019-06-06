@@ -1,4 +1,6 @@
+*.pyc
 sockets/venv/
 /venv/
 cap_store/AM824initialset
 cap_store/PMDinitialset
+
