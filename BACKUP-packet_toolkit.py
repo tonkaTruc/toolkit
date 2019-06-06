@@ -8,6 +8,8 @@ import netifaces
 import subprocess
 import time
 
+from custom_headers import erspan, PTP
+
 packet_counter = 0
 current_rtp_time = 0
 rtp_stamps = []
@@ -18,10 +20,16 @@ class pkt_craft:
 
 		# Configure the host network adapter to use
 		print("Configure capture interface")
+
+		if capture_interface:
+			print("Capture interface supplied as: %s" % capture_interface)
 		self.capture_interface = configure_interface(capture_interface)
 		logging.debug("Capture interface set as: %s" % self.capture_interface)
-		
+
 		print("Configure replay interface")
+
+		if replay_interface:
+			print("Replay interface supplied as: %s" % replay_interface)
 		self.replay_interface = configure_interface(replay_interface)
 		logging.debug("Replay interface set as: %s" % self.capture_interface)
 
@@ -169,20 +177,11 @@ class pkt_craft:
 					ERSPAN in p
 				except:
 					print("GOT ERROR")
-
-				print(90 * "-")
+				print(90*"-")
 				p.show()
 				hexdump(p)
-				print(90 * "-")
-
-				menu = [
-					"Exit to menu: \"exit\"",
-					"Next packet: <Enter>",
-					"Alter the packet: \"change\"",
-				]
-
-				print(" | ".join(x for x in menu))
-				i = input("[CMD]:")
+				print(90*"-")
+				i = input("... ")
 
 				# Escape the loop back to menu
 				if i == "exit":
@@ -441,7 +440,7 @@ class pkt_craft:
 
 				if usr_opt == "0":
 					sr(self.current_pcap)
-				elif usr_opt == "2":
+				elif usr_opt == "1":
 					sendp(self.current_pcap, iface=self.replay_interface["name"])
 
 				def zero_dst(pkt):
@@ -524,9 +523,5 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	
-	# Training room
-	# krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
-	
+	krft = pkt_craft("enp4s0f1np1", "enp1s0f1")
 	krft.menu()
-

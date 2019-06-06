@@ -1,3 +1,4 @@
+.save
 *.pyc
 sockets/venv/
 /venv/
