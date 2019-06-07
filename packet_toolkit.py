@@ -12,6 +12,9 @@ packet_counter = 0
 current_rtp_time = 0
 rtp_stamps = []
 
+# TODO: Implement PTPv2 layer decoding
+
+
 class pkt_craft:
 
 	def __init__(self, capture_interface=None, replay_interface=None):
@@ -397,8 +400,7 @@ class pkt_craft:
 					else:
 						print("Incorrectly formatted cmd: \t%s" % cmd)
 				continue
-					
-						
+
 			elif usr_opt == "4":
 				self.inspect(mode="iterate")
 				continue
@@ -454,9 +456,6 @@ class pkt_craft:
 
 				# for pkt in self.current_pcap:
 				# 	zero_dst(pkt)
-
-
-
 				# for pkt in self.current_pcap:
 				# 	print(pkt[Ether].dst)
 				# 	# Zero dst MAC address
@@ -523,6 +522,7 @@ def configure_interface(interface=None):
 			else:
 				logging.error("Failed to find nic dict")
 
+
 if __name__ == "__main__":
-	krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
+	krft = pkt_craft()
 	krft.menu()
