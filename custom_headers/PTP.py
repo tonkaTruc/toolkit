@@ -39,8 +39,8 @@ class ieee1588(Packet):
 
 bind_layers(Ether, ieee1588, type="0x88F7")
 
-pkt = Ether() / IP(src=src_addr, dst=dst_addr) / UDP(sport=udp_src_port, dport=udp_dst_port)  #/ ieee1588()
+#pkt = Ether() / IP(src=src_addr, dst=dst_addr) / UDP(sport=udp_src_port, dport=udp_dst_port)  #/ ieee1588()
 
-print(pkt.show())
+#print(pkt.show())
 
-send(pkt)
+#send(pkt)
