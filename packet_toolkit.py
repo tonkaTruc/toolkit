@@ -528,5 +528,6 @@ if __name__ == "__main__":
 	# Training room
 	# krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
 	
+	krft = pkt_craft()
 	krft.menu()
 
