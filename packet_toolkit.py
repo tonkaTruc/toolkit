@@ -1,4 +1,7 @@
 from scapy.all import *
+from custom_headers.erspan import *
+from custom_headers.PTP import ieee1588
+
 import socket
 import psutil
 import json
@@ -169,6 +172,16 @@ class pkt_craft:
 					ERSPAN in p
 				except:
 					print("GOT ERROR")
+
+#				try:
+#					ERSPAN_III in p
+#				except:
+#					print("GOT 2nd ERROR")
+
+				try:
+					ieee1588 in p
+				except:
+					print("GOT 3rd ERROR")
 
 				print(90 * "-")
 				p.show()
@@ -504,5 +517,9 @@ def configure_interface(interface=None):
 
 
 if __name__ == "__main__":
+
+	# Training room
+	# krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
+
 	krft = pkt_craft()
 	krft.menu()
