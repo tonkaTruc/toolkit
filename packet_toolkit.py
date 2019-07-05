@@ -1,6 +1,6 @@
 from scapy.all import *
 from custom_headers.erspan import *
-from custom_headers.PTP import ieee1588
+from custom_headers.PTP import *
 
 import socket
 import psutil
@@ -177,11 +177,12 @@ class pkt_craft:
 #					ERSPAN_III in p
 #				except:
 #					print("GOT 2nd ERROR")
-
-				try:
-					ieee1588 in p
-				except:
-					print("GOT 3rd ERROR")
+				#
+				# if p.haslayer(ie):
+				# 	try:
+				# 		p[ieee1588] = p[Raw].load
+				# 	except IndexError as err:
+				# 		print("NO PTP: %s" % err)
 
 				print(90 * "-")
 				p.show()

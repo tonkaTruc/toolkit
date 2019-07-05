@@ -20,7 +20,7 @@ class ieee1588(Packet):
 
     fields_desc = [
         XBitField('transportSpecific', 0x1, 4),        # 4 bits
-	XBitField('messageType', 0x3, 4),              # 4 bits
+        XBitField('messageType', 0x3, 4),              # 4 bits
         XByteField('versionPTP', 0x05),               # 4 bits
         XShortField('messageLength', 0x0036),      # 2 bytes (what is fmt=H)
         XByteField('subdomainNumber', 0x00),
@@ -35,13 +35,13 @@ class ieee1588(Packet):
         XByteField('logMessagePeriod', 0x7F),     # 1 byte
         XBitField('requestTimestampSec', 0x00000000057b, 48),
         XBitField('requestTimestampNanoSec', 0x0d11715c, 32),
-	XBitField('sourcePortId', 0x08028efffe9b97a5, 64),
-	XShortField('requestingSourcePortId', 0x002)
+        XBitField('sourcePortId', 0x08028efffe9b97a5, 64),
+        XShortField('requestingSourcePortId', 0x002)
     ]
 
 
 bind_layers(ERSPAN_III, ieee1588, type="0x88F7")
-bind_layers(ERSPAN_III, Ether, type="0x22f0")
+bind_layers(Ether, ieee1588)
 #bind_layers(ieee1722, iec61883)
 
 #pkt = Ether() / IP(src=src_addr, dst=dst_addr) / UDP(sport=udp_src_port, dport=udp_dst_port)  #/ ieee1588()
