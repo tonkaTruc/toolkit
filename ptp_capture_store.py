@@ -188,10 +188,16 @@ def ptp_storage(pkt):
 
 if __name__ == "__main__":
 
-	# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/ptp_cap.pcap")
-	cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/ERSPAN_PTP_sample.pcap")
-	# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/erspan_multi_flow[reduced].pcap")
-	# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/sync_msgs.pcap")
+	cap_mode = input("Process <live> or <offline> capture?: ").lower()
+
+	if cap_mode == "offline":
+		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/ptp_cap.pcap")
+		cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/ERSPAN_PTP_sample.pcap")
+		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/erspan_multi_flow[reduced].pcap")
+		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/sync_msgs.pcap")
+	elif cap_mode == "live":
+		pkt_count = int(input("How many live capture packets?: "))
+		cap = sniff(count=int(input("How many live capture packets?: ")), interface=input("Please enter interface to capture from: "))
 
 	print("Capture details: \t%s" % cap.summary)
 	full_capture_array = np.zeros((len(cap), 2))
