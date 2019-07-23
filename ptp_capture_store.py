@@ -213,7 +213,11 @@ if __name__ == "__main__":
 	# 																	   req_resp.shape))
 
 	for idx, pkt in zip(full_capture_array, cap):
-		check_erspan_wrap(pkt)
+
+		if pkt.haslayer(ERSPAN_III):
+			check_erspan_wrap(pkt)
+		else:
+			continue
 
 		if pkt.haslayer(ieee1588):
 
