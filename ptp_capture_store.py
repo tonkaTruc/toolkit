@@ -196,8 +196,7 @@ if __name__ == "__main__":
 		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/erspan_multi_flow[reduced].pcap")
 		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/sync_msgs.pcap")
 	elif cap_mode == "live":
-		pkt_count = int(input("How many live capture packets?: "))
-		cap = sniff(count=int(input("How many live capture packets?: ")), interface=input("Please enter interface to capture from: "))
+		cap = sniff(count=int(input("How many live capture packets?: ")), iface=input("Please enter interface to capture from: "))
 
 	print("Capture details: \t%s" % cap.summary)
 	full_capture_array = np.zeros((len(cap), 2))
