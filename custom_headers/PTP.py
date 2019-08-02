@@ -1,25 +1,16 @@
 from scapy.layers.l2 import Ether
-from scapy.all import IP, UDP, send
+from scapy.all import IP, UDP
 from scapy.packet import Packet, bind_layers
 from scapy.fields import *
 from custom_headers.erspan import *
 
-# IP header
-src_addr = "192.168.0.125" # PTP GM
-dst_addr = "192.168.10.200" # Qx
-
-# UDP header
-udp_src_port = 320
-udp_dst_port = 320
-
-# PTP packet constituion info taken from: https://support.huawei.com/hedex/pages/EDOC100010596830008125/05/EDOC100010596830008125/05/resources/message/cd_feature_1588v2_format-general.html
 
 class ieee1588(Packet):
 	name = "Precision Time Protocol"
 
 	fields_desc = [
 		XBitField('transportSpecific', 0x1, 4),        # 4 bits
-		XBitField('messageType', 0x3, 4),              # 4 bits
+		XBitField('messageType', 0x0, 4),              # 4 bits
 		XByteField('versionPTP', 0x05),               # 4 bits
 		XShortField('messageLength', 0x0036),      # 2 bytes (what is fmt=H)
 		XByteField('subdomainNumber', 0x00),
@@ -35,7 +26,12 @@ class ieee1588(Packet):
 		XByteField('control', 0x05),                    # 1 byte
 		XByteField('logMessagePeriod', 0x7F),     # 1 byte
 		XBitField('originTimestamp_s', 0x00, 48),
-		XBitField('originTimestamp_ns', 0x00, 32)
+		XBitField('originTimestamp_ns', 0x00, 32),
+
+		# # DELAY_RESP
+		# XBitField('requestingSourcePortIdentity', 0x00, 64),
+		# XBitField('requestingSourcePortId', 0x00, 16)
+
 		# XBitField('dummy3', 0x00, 80),
 		# XBitField('originCurrentUTCOffset', 0x00, 8)
 		# XByteField('dummy4', 0x00)
@@ -49,9 +45,3 @@ class ieee1588(Packet):
 
 bind_layers(Ether, ieee1588, type="0x88F7")
 bind_layers(UDP, ieee1588)
-
-#pkt = Ether() / IP(src=src_addr, dst=dst_addr) / UDP(sport=udp_src_port, dport=udp_dst_port)  #/ ieee1588()
-
-#print(pkt.show())
-
-#send(pkt)

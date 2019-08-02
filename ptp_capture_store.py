@@ -34,6 +34,7 @@ def get_erpsan_header(pkt):
 	:param pkt:
 	:return 1d numpy array:
 	"""
+
 	# Create temp empty array to store ERSPAN header for packet
 	erspan_header_array = np.zeros(3)
 
@@ -53,11 +54,11 @@ def get_erpsan_header(pkt):
 	return erspan_header_array
 
 
-def ptp_storage(pkt):
+def ptp_parse(pkt):
 	"""
 	Pull timestamp data from ERSPAN header (if exists, idx will be zeros if not)
 	Pull desired data from IEEE1588 headers
-	Concatanate header info into a single 1d numpy array and return
+	Concatenate header info into a single 1d numpy array and return
 
 	[[
 		ERSPAN TS raw
@@ -87,7 +88,8 @@ def ptp_storage(pkt):
 
 	try:
 		# If <SYNC> or <DELAY_REQ> packet
-		if pkt[ieee1588].messageType in [0x0, 0x1]:
+		# if pkt[ieee1588].messageType in [0x0, 0x1]:
+		if pkt.haslayer(ieee1588):
 			"""
 			Produce a 1d numpy containing relevant parameter values from a SYNC / DELAY_REQ packet
 			
@@ -105,7 +107,7 @@ def ptp_storage(pkt):
 			]]
 			"""
 
-			# Create temp empty 2d array to store SYNC header values
+			# Create temp empty 1d array to store SYNC header values
 			ieee1588_array = np.zeros(9)
 
 			# Sequence number
@@ -116,21 +118,38 @@ def ptp_storage(pkt):
 			ieee1588_array[1] = pkt[ieee1588].messageType
 			print("Written PTP messageID value (%s) to IEEE1588 array idx 1" % ieee1588_array[1])
 
-			# RAW origin TS (ns)
-			ieee1588_array[2] = pkt[ieee1588].originTimestamp_ns
-			print("Written PTP timestamp_ns value (%s) to IEEE1588 array idx 2" % ieee1588_array[2])
+			# If <SYNC> or <DELAY_REQ> packet
+			if pkt[ieee1588].messageType in [0x0, 0x1]:
 
-			# origin TS (ns) offset
-			ieee1588_array[3] = pkt[ieee1588].originTimestamp_ns # - origin_ts_ns_raw[0] **Fist sync packet TS ns value in master
-			print("Written PTP timestamp_ns offset value (%s) to IEEE1588 array idx 3" % ieee1588_array[3])
+				# RAW origin TS (ns)
+				ieee1588_array[2] = pkt[ieee1588].originTimestamp_ns
+				print("Written PTP timestamp_ns value (%s) to IEEE1588 array idx 2" % ieee1588_array[2])
 
-			# RAW origin TS (s)
-			ieee1588_array[4] = pkt[ieee1588].originTimestamp_s
-			print("Written PTP timestamp_s value (%s) to IEEE1588 array idx 4" % ieee1588_array[4])
+				# origin TS (ns) offset
+				ieee1588_array[3] = pkt[ieee1588].originTimestamp_ns # - origin_ts_ns_raw[0] **Fist sync packet TS ns value in master
+				print("Written PTP timestamp_ns offset value (%s) to IEEE1588 array idx 3" % ieee1588_array[3])
 
-			# origin TS (s) offset
-			ieee1588_array[5] = pkt[ieee1588].originTimestamp_s # - origin_ts_ns_raw[0] **Fist sync packet TS s value in master
-			print("Written PTP timestamp_s offset value (%s) to IEEE1588 array idx 5" % ieee1588_array[5])
+				# RAW origin TS (s)
+				ieee1588_array[4] = pkt[ieee1588].originTimestamp_s
+				print("Written PTP timestamp_s value (%s) to IEEE1588 array idx 4" % ieee1588_array[4])
+
+				# origin TS (s) offset
+				ieee1588_array[5] = pkt[ieee1588].originTimestamp_s # - origin_ts_ns_raw[0] **Fist sync packet TS s value in master
+				print("Written PTP timestamp_s offset value (%s) to IEEE1588 array idx 5" % ieee1588_array[5])
+
+			# If <Delay Resp> packet
+			elif pkt[ieee1588].messageType in [0x9]:
+				# receiveTimestamp_s,
+				# receiveTimestamp_ns,
+				print("\n\n\n\n\n\n\n")
+				# print(pkt.show())
+				# # RAW origin TS (ns)
+				# ieee1588_array[2] = pkt[ieee1588].originTimestamp_ns
+				# print("Written PTP timestamp_ns value (%s) to IEEE1588 array idx 2" % ieee1588_array[2])
+				#
+				# # origin TS (ns) offset
+				# ieee1588_array[3] = pkt[ieee1588].originTimestamp_ns  # - origin_ts_ns_raw[0] **Fist sync packet TS ns value in master
+				# print("Written PTP timestamp_ns offset value (%s) to IEEE1588 array idx 3" % ieee1588_array[3])
 
 			# Correction
 			ieee1588_array[6] = pkt[ieee1588].correction
@@ -160,12 +179,29 @@ def ptp_storage(pkt):
 				originTimeStamp_s offset,
 				Correction,
 				SourcePortID,
+				logMessagePeriod
 			]]
 			"""
 
 			print("FOLOW UP packet!")
 
 		elif pkt[ieee1588].messageType == 0x9:
+			"""	Produce a 1d numpy containing relevant parameter values from a FOLLOW_UP packet
+
+			Returned numpy array shape and contents:
+			[[
+				packet seqno,
+				messageType
+				receiveTimestamp_s,
+				receiveTimestamp_ns,
+				# clockIdentity
+				# requestingSourcePortID
+				Correction,
+				SourcePortID,
+				logMessagePeriod
+			]]
+			"""
+
 			print("DELAY RESP")
 
 		elif pkt[ieee1588].messageType == 0xb:
@@ -174,7 +210,7 @@ def ptp_storage(pkt):
 		elif pkt[ieee1588].messageType == 0xd:
 			print("MGMT")
 		else:
-			print("Not a recognised PTP packet: %s" % pkt.summary())
+			print("Not a recognised PTP packet: %s" % (pkt.summary()))
 
 	except IndexError as err:
 		print("\t%s: %s" % (err, pkt.summary()))
@@ -183,7 +219,7 @@ def ptp_storage(pkt):
 		# Concatanate the ERSPAN header values with the IEEE1588 data
 		return np.concatenate([erspan_array, ieee1588_array], axis=0)
 	except UnboundLocalError as err:
-		print(err)
+		print("Failed to concatenate ERSPAN and IEEE1588 layer info: %s" % err)
 
 
 if __name__ == "__main__":
@@ -199,20 +235,11 @@ if __name__ == "__main__":
 		cap = sniff(count=int(input("How many live capture packets?: ")), iface=input("Please enter interface to capture from: "))
 
 	print("Capture details: \t%s" % cap.summary)
-	full_capture_array = np.zeros((len(cap), 2))
 
-	# # Create storage arrays for packet data
-	# print("Creating numpy arrays to store packet data...")
-	# sync_follow_up = np.empty((len(cap), 2))
-	# print("SYNC / FOLLOW_UP: \t\tSize: %s Dimentions: %s Shape: %s" % (sync_follow_up.size,
-	# 																   sync_follow_up.ndim,
-	# 																   sync_follow_up.shape))
-	# req_resp = np.empty((len(cap), 2))
-	# print("DELAY_REQ / DELAY RESP: \tSize: %s Dimentions: %s Shape: %s" % (req_resp.size,
-	# 																	   req_resp.ndim,
-	# 																	   req_resp.shape))
+	# Create an empty 12 dimentional array equal to the length of all packets contained in "cap" var
+	full_capture_array = np.zeros((len(cap), 12))
 
-	for idx, pkt in zip(full_capture_array, cap):
+	for pkt, idx in zip(cap, full_capture_array):
 
 		if pkt.haslayer(ERSPAN_III):
 			check_erspan_wrap(pkt)
@@ -222,61 +249,38 @@ if __name__ == "__main__":
 		if pkt.haslayer(ieee1588):
 
 			# Assign a 1d numpy array containing timstamp + other info for ERSPAN and IEEE1588 layers of single pkt to var
-			packet_array = ptp_storage(pkt)
-
+			packet_array = ptp_parse(pkt)
 
 			# Verify the array contains valid data (value will be None if IEEE1588 layer has not been decoded or the
 			# layer does not exist)
 			if isinstance(packet_array, type(None)):
-				print("SHOULD SKIP")
 				continue
-			elif packet_array[4] in [0x0]:
+			else:
+				# Assign the decoded data from IEEE1588 data to the current index of main array
+				idx[0:] = packet_array[0:]
 
-				plt.xlabel("Sync message sequence number")
-				plt.ylabel("Sync message timestamp_ns")
-				plt.scatter(packet_array[3], packet_array[5])
-
-			elif packet_array[4] == "fff":
-					# TODO: Add this packet data to master packet bucket (ieee1588 seqno value is stored @ idx 3 of the ERSPAN / IEEE1588 concatanated array)
-					print("\n\n\n\n\n\n\n\n")
-
-					# packet_array.flatten()
-					print(idx)
-					print(full_capture_array.size)
-					print(full_capture_array.shape)
-					print(full_capture_array.ndim)
-
-					# idx[1] = packet_array
-
-					# new_array = np.insert(full_capture_array, 2, packet_array, axis=1)
-
-				# 	print(idx)
-				# 	print("idx size after: %s" % idx.size)
-				# 	print("idx shape after: %s" % idx.shape)
-				# 	print("idx dim after: %s" % idx.ndim)
-				#
-				# 	print(new_array)
-				# 	print("new_array size: %s" % new_array.size)
-				# 	print("new_array shape: %s" % new_array.shape)
-				# 	print("new_array dim: %s" % new_array.ndim)
-				#
-				# 	print("Written to index: %s" % idx)
-				# 	print("\n\n\n\n\n\n\n\n")
-				# 	input("-------- ")
-				#
-				# print("-------------------- VALID!!!!!!!!")
+			if packet_array[4] in [0x0]:
+				# Packet is SYNC header
+				# plt.xlabel("Sync message sequence number")
+				# plt.ylabel("Sync message timestamp_ns")
+				# plt.scatter(packet_array[3], packet_array[5])
+				# plt.savefig("ptp_seqno_vs_sync_ts_ns.png")
+				pass
 		else:
 			print("No PTP")
 
+	for idx in full_capture_array:
+		print(50*"-")
+		# print(idx)
+		for value in idx:
+			print(value)
+		print(pkt[ERSPAN_III].show())
+		print(50 * "-")
+		input("- ")
 
-	plt.savefig("ptp_seqno_vs_sync_ts_ns.png")
+# print(full_capture_array)
 
-	# print(full_capture_array)
-	# for idx in full_capture_array:
-	# 	idx[0] = 1
-	# 	idx[1] = 2
-	#
-	# print(full_capture_array)
+
 
 
 
