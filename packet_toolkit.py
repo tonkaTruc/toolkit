@@ -452,29 +452,9 @@ class pkt_craft:
 					pkt[IP].dst = "239.1.2.3"
 					return pkt
 
-				# for pkt in self.current_pcap:
-				# 	zero_dst(pkt)
-
-
-
-				# for pkt in self.current_pcap:
-				# 	print(pkt[Ether].dst)
-				# 	# Zero dst MAC address
-				# 	pkt[Ether].dst = "00:00:00:00:00:00"
-				#
-				# 	print(pkt.summary())
-				# 	print(pkt[Ether].dst)
-				#
-				# 	# Send the packet
-				# 	# FIXME: This will probably not work for linux... needs testing
-				# 	try:
-				# 		sendp(pkt, iface=self.selected_interface["name"])
-				# 	except ValueError as err:
-				# 		logging.error("Cound not send the packet... sendp os: " + str(err))
-
 
 def configure_interface(interface=None):
-	"""Gather list of available network interfaces and return NIC information in dict format"""
+"""Gather list of available network interfaces and return NIC information in dict format"""
 
 	if os.name == "nt":
 		print("Running Windows")
@@ -489,6 +469,11 @@ def configure_interface(interface=None):
 				nic_info[int_name] = netifaces.ifaddresses(int_guid)[netifaces.AF_INET][0]
 				nic_info[int_name].update({"guid": int_guid})
 				nic_info[int_name].update({"name": int_name})
+			except ValueError as err:
+				print(err)
+				print("Failure ocurred during interface: %s %s" % (int_name, int_guid))
+				print("\nInterface data:\n")
+				print(json.dumps(nic_info, indent=2))
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s" % int_name)
 		
@@ -527,6 +512,7 @@ if __name__ == "__main__":
 	
 	# Training room
 	# krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
-	
+
+	krft = pkt_craft()
 	krft.menu()
 
