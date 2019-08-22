@@ -467,7 +467,7 @@ class pkt_craft:
 
 
 def configure_interface(interface=None):
-"""Gather list of available network interfaces and return NIC information in dict format"""
+	"""Gather list of available network interfaces and return NIC information in dict format"""
 
 	if os.name == "nt":
 		print("Running Windows")
@@ -503,8 +503,9 @@ def configure_interface(interface=None):
 				nic_info[int_name].update({"name": int_name})
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s... " % int_name)
-	
-	print(json.dumps(nic_info, indent=4))
+	else:
+		nic_info = None
+		quit()
 
 	if not interface:
 		interface = input("Enter interface name: ")

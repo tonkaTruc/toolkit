@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
 	if cap_mode == "offline":
 		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/ptp_cap.pcap")
-		cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/ERSPAN_PTP_sample.pcap")
+		cap = rdpcap("cap_store/ERSPAN_PTP_sample.pcap")
 		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/erspan_multi_flow[reduced].pcap")
 		# cap = rdpcap("/home/tommys/PHABRIX/toolkit/cap_store/sync_msgs.pcap")
 	elif cap_mode == "live":
@@ -237,11 +237,13 @@ if __name__ == "__main__":
 	print("Capture details: \t%s" % cap.summary)
 
 	# Create an empty 12 dimentional array equal to the length of all packets contained in "cap" var
+	# 12 dimentions will allow storage of all capture parameters / values that we are interested in
 	full_capture_array = np.zeros((len(cap), 12))
 
 	for pkt, idx in zip(cap, full_capture_array):
 
 		if pkt.haslayer(ERSPAN_III):
+			print("Packet has ERSPAN_III layer... decoding")
 			check_erspan_wrap(pkt)
 		else:
 			continue
