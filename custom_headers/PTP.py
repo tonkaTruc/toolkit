@@ -1,46 +1,47 @@
 from scapy.layers.l2 import Ether
-from scapy.all import IP, UDP, send
+from scapy.all import IP, UDP
 from scapy.packet import Packet, bind_layers
 from scapy.fields import *
-
-# IP header
-src_addr = "192.168.0.125" # PTP GM
-dst_addr = "192.168.10.200" # Qx
-
-# UDP header
-udp_src_port = 320
-udp_dst_port = 320
-
-# PTP packet constituion info taken from: https://support.huawei.com/hedex/pages/EDOC100010596830008125/05/EDOC100010596830008125/05/resources/message/cd_feature_1588v2_format-general.html
+from custom_headers.erspan import *
 
 
 class ieee1588(Packet):
-    name = "Precision Time Protocol"
+	name = "Precision Time Protocol"
 
-    fields_desc = [
-        BitField('transportSpecific', 1, 4),        # 4 bits
-        BitField('messageType', 0, 4),              # 4 bits
-        BitField('versionPTP', 2, 4),               # 4 bits
-        LenField('messageLength', 0, fmt="H"),      # 2 bytes (what is fmt=H)
-        ByteField('subdomainNumber', 0),
-        ByteField('dummy1', 0),
-        XShortField('flags', 0),                    # 2 bytes
-        LongField('correction', 0),                 # 64 bits
-        IntField('dummy2', 0),
-        XLongField('ClockIdentity', 0),
-        XShortField('SourcePortId', 0),
-        XShortField('sequenceId', 0),               # 2 bytes
-        ByteField('control', 0),                    # 1 byte
-        SignedByteField('logMessagePeriod', 0),     # 1 byte
-        Field('TimestampSec', 0, fmt='6s'),
-        IntField('TimestampNanoSec', 0)
-    ]
+	fields_desc = [
+		XBitField('transportSpecific', 0x1, 4),        # 4 bits
+		XBitField('messageType', 0x0, 4),              # 4 bits
+		XByteField('versionPTP', 0x05),               # 4 bits
+		XShortField('messageLength', 0x0036),      # 2 bytes (what is fmt=H)
+		XByteField('subdomainNumber', 0x00),
+		XByteField('dummy1', 0x00),
+		XShortField('flags', 0x0208),                    # 2 bytes
+
+		# Correction for <SYNC> incorrect
+		XBitField('correction', 0x00000000, 64),                 # 64 bits
+		XBitField('dummy2', 0x00, 32),
+		XBitField('ClockIdentity', 0x08028efffe9b97a5, 64),
+		XShortField('SourcePortId', 0x0002),
+		XShortField('sequenceId', 0x0566),               # 2 bytes
+		XByteField('control', 0x05),                    # 1 byte
+		XByteField('logMessagePeriod', 0x7F),     # 1 byte
+		XBitField('originTimestamp_s', 0x00, 48),
+		XBitField('originTimestamp_ns', 0x00, 32),
+
+		# # DELAY_RESP
+		# XBitField('requestingSourcePortIdentity', 0x00, 64),
+		# XBitField('requestingSourcePortId', 0x00, 16)
+
+		# XBitField('dummy3', 0x00, 80),
+		# XBitField('originCurrentUTCOffset', 0x00, 8)
+		# XByteField('dummy4', 0x00)
+		# XBitField('priority1', 0x0, 4)
+
+		# XBitField('requestTimestampSec', 0x00000000057b, 48),
+		# XBitField('requestTimestampNanoSec', 0x0d11715c, 32),
+		# XShortField('requestingSourcePortId', 0x002)
+	]
 
 
 bind_layers(Ether, ieee1588, type="0x88F7")
-
-#pkt = Ether() / IP(src=src_addr, dst=dst_addr) / UDP(sport=udp_src_port, dport=udp_dst_port)  #/ ieee1588()
-
-#print(pkt.show())
-
-#send(pkt)
+bind_layers(UDP, ieee1588)

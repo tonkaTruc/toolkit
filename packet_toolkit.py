@@ -1,4 +1,7 @@
 from scapy.all import *
+from custom_headers.erspan import *
+from custom_headers.PTP import *
+
 import socket
 import psutil
 import json
@@ -11,6 +14,7 @@ import time
 packet_counter = 0
 current_rtp_time = 0
 rtp_stamps = []
+
 
 class pkt_craft:
 
@@ -134,7 +138,6 @@ class pkt_craft:
 		global current_rtp_time
 		global rtp_stamps
 
-		
 		# print(pkt.show())
 		# print("\n" + str(pkt[Raw]))
 		if IP in pkt:
@@ -169,6 +172,17 @@ class pkt_craft:
 					ERSPAN in p
 				except:
 					print("GOT ERROR")
+
+#				try:
+#					ERSPAN_III in p
+#				except:
+#					print("GOT 2nd ERROR")
+				#
+				# if p.haslayer(ie):
+				# 	try:
+				# 		p[ieee1588] = p[Raw].load
+				# 	except IndexError as err:
+				# 		print("NO PTP: %s" % err)
 
 				print(90 * "-")
 				p.show()
@@ -397,8 +411,7 @@ class pkt_craft:
 					else:
 						print("Incorrectly formatted cmd: \t%s" % cmd)
 				continue
-					
-						
+
 			elif usr_opt == "4":
 				self.inspect(mode="iterate")
 				continue
@@ -509,7 +522,7 @@ def configure_interface(interface=None):
 				logging.error("Failed to find nic dict")
 
 if __name__ == "__main__":
-	
+
 	# Training room
 	# krft = pkt_craft("Mellanox ConnectX-5 Adapter #2", "Mellanox ConnectX-5 Adapter")
 
