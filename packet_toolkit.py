@@ -482,6 +482,11 @@ def configure_interface(interface=None):
 				nic_info[int_name] = netifaces.ifaddresses(int_guid)[netifaces.AF_INET][0]
 				nic_info[int_name].update({"guid": int_guid})
 				nic_info[int_name].update({"name": int_name})
+			except ValueError as err:
+				print(err)
+				print("Failure ocurred during interface: %s %s" % (int_name, int_guid))
+				print("\nInterface data:\n")
+				print(json.dumps(nic_info, indent=2))
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s" % int_name)
 		
@@ -498,8 +503,9 @@ def configure_interface(interface=None):
 				nic_info[int_name].update({"name": int_name})
 			except KeyError:
 				print("No IPv4 address assigned to NIC %s... " % int_name)
-	
-	print(json.dumps(nic_info, indent=4))
+	else:
+		nic_info = None
+		quit()
 
 	if not interface:
 		interface = input("Enter interface name: ")
@@ -516,7 +522,6 @@ def configure_interface(interface=None):
 			else:
 				logging.error("Failed to find nic dict")
 
-
 if __name__ == "__main__":
 
 	# Training room
@@ -524,3 +529,4 @@ if __name__ == "__main__":
 
 	krft = pkt_craft()
 	krft.menu()
+
