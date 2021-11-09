@@ -5,6 +5,7 @@ import struct
 # import numpy as np
 
 class SimpleServer:
+	
 	def __init__(self, HOST, PORT):
 		self.HOST = HOST
 		self.PORT = PORT
@@ -14,7 +15,7 @@ class SimpleServer:
 		try:
 			self.s.bind((self.HOST, self.PORT))
 		except socket.error as err:
-			print("Could not bind %s:%s" % (self.HOST, self.PORT))
+			print(f"Could not bind {self.HOST}:{self.PORT}")
 			print(err)
 
 			print("USAGE:\n\t- python3 simple_socket.py <host> <port>")
@@ -22,7 +23,7 @@ class SimpleServer:
 
 			sys.exit()
 
-		print("Successfully bound %s:%s" % (self.HOST, self.PORT))
+		print(f"Successfully bound {self.HOST}:{self.PORT}")
 
 	def server(self, number_of_connections=1, timeout=60):
 		self.s.listen(number_of_connections)
@@ -39,13 +40,13 @@ class SimpleServer:
 				if not data:
 					break
 				conn.sendall(reply)
-
 				conn.close()
 		except OSError.Exception.socket.timeout:
 			print("Nothing received within timeout")
 
 
 class MulticastMgr:
+	
 	def __init__(self, MCAST_GRP, MCAST_PORT):
 		self.MCAST_GRP = MCAST_GRP
 		self.MCAST_PORT = int(MCAST_PORT)
@@ -66,27 +67,18 @@ class MulticastMgr:
 
 		self.s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
 		self.s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
-		print("Successfully join multicast group %s" % self.MCAST_GRP)
+		print(f"Successfully join multicast group {self.MCAST_GRP}")
 
 	def create_socket(self, port):
 
-		# raw socket
+		# Create raw socket and allow resuse of the address
 		s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-
-		# allow reuse of addresses
 		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-		# bind socket to an interface
-		# Apple OS cannot receive multicast when socket is bound to a SPECIFIC interface
-		# Windows cannot receive multicast when bound to ALL ports
-
-		if sys.platform.startswith("darwin"):
-			s.bind(('0.0.0.0', port))
-		else:
-			s.bind((self.INTERFACE_IP, port))
-
-		return s
-
+		# Bind socket to an interface
+		# 	Apple OS cannot receive multicast when socket is bound to a SPECIFIC interface
+		# 	Windows cannot receive multicast when bound to ALL ports
+		s.bind(('0.0.0.0', port)) if sys.platform.startswith("darwin") else s.bind((self.INTERFACE_IP, port))
 		
 	
 	def display_grp_traffic(self):

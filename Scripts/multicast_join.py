@@ -5,14 +5,12 @@ import re
 import sys
 from struct import *
 
-# SERVER_IP = '192.168.10.1'
-SERVER_IP = '192.168.0.10'
-
-
 class MulticastMgr:
 
-	def __init__(self, switch_ip):
+	def __init__(self, switch_ip=None):
 
+		if not switch_ip: print("Switch IP address is missing... initialise using \"switch_ip=0.0.0.0\"")
+		
 		# Create a temp socket and use that to connect to the switch. This will identify to correct NIC to use for comms
 		# to the switch and get the address information needed
 		temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -27,10 +25,9 @@ class MulticastMgr:
 		finally:
 			temp_socket.close()
 
-		print('Using interface: %s' % self.local_ip)
-
 		self.sock = create_socket(self.local_ip, 9989)
-		print('Created UDP socket: %s' % self.sock)
+		print(f'Using interface: {self.local_ip}')
+		print(f'Created UDP socket: {self.sock}')
 
 		# set multicast interface to local_ip
 		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.local_ip))
@@ -38,7 +35,7 @@ class MulticastMgr:
 		# Set multicast time-to-live to 2...should keep our multicast packets from escaping the local network
 		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
 
-	def _join(self, multicast_ip):
+	def join(self, multicast_ip):
 
 		# Construct a membership request...
 		membership_request = socket.inet_aton(multicast_ip) + socket.inet_aton(self.local_ip)
@@ -48,13 +45,13 @@ class MulticastMgr:
 		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, membership_request)
 
 		try:
-			print('Multicast JOIN has been sent. Entering while loop... Ctrl+C to exit and close socket.')
-			# while True:
-			# 	pass
+			print(f'Multicast JOIN has been sent {multicast_ip}. Entering while loop... Ctrl+C to exit and close socket.')
+			while True:
+				pass
 		except KeyboardInterrupt:
-			self._leave(multicast_ip)
+			self.leave(multicast_ip)
 
-	def _leave(self, multicast_ip):
+	def leave(self, multicast_ip):
 
 		# Construct a membership request...
 		membership_request = socket.inet_aton(multicast_ip) + socket.inet_aton(self.local_ip)
@@ -90,14 +87,15 @@ def ip_is_local(ip_string):
 	It's safe here, but never use a regex for IP verification if from a potentially dangerous source.
 	"""
 	combined_regex = "(^10\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.168\.)"
-	return re.match(combined_regex, ip_string) is not None # is not None is just a sneaky way of converting to a boolean
+	
+	return re.match(combined_regex, ip_string) is not None # convert to a boolean
 
 
 def print_stream_info(my_socket):
 
 	# Data waits on socket buffer until we retrieve it.
 	# NOTE: Normally, you would want to compare the incoming data's source address to your own, and filter it out
-	#       if it came rom the current machine. Everything you send gets echoed back at you if your socket is
+	#       if it came from the current machine. Everything you send gets echoed back at you if your socket is
 	#       subscribed to the multicast group.
 
 	packet = my_socket.recvfrom(2624)
@@ -129,14 +127,14 @@ def print_stream_info(my_socket):
 	if protocol == 17:
 		protocol = 'UDP'
 
-	s_addr = socket.inet_ntoa(iph[8]);
-	d_addr = socket.inet_ntoa(iph[9]);
+	src_addr = socket.inet_ntoa(iph[8]);
+	dst_addr = socket.inet_ntoa(iph[9]);
 
-	if d_addr == multicast_ip:
+	if dst_addr == multicast_ip:
 		print('\nMulticast stream detected!')
 		print('\nProtocol: \t\t', protocol)
 		print('Source Port: \t\t', source_port, '\nDestination Port: \t', dest_port)
-		print('Source Address: \t', s_addr, '\nDestination Address: \t', d_addr)
+		print('Source Address: \t', src_addr, '\nDestination Address: \t', dst_addr)
 		print('\nCheck wireshark to ensure the correct packets are reaching your NIC\n')
 		return True
 
@@ -147,8 +145,8 @@ def print_stream_info(my_socket):
 
 if __name__ == '__main__':
 
-	test = MulticastMgr('192.168.10.1')
-	test._join('239.4.20.1')
+	test = MulticastMgr(switch_ip='192.168.10.1')
+	test.join('239.4.20.1')
 
 	# switch_ip = input('Enter the address of the network switch being used: ')
 

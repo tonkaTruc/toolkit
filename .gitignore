@@ -1,7 +1,7 @@
+.idea/
 .save
 *.pyc
-sockets/venv/
-/venv/
+/venvs/
 cap_store/AM824initialset
 cap_store/PMDinitialset
 
