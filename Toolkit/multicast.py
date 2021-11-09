@@ -2,26 +2,14 @@ import socket
 import re
 import sys
 import struct
+from .utils import get_best_interface_for
 
 class MulticastMgr:
 
 	def __init__(self, switch_ip=None):
 
 		if not switch_ip: print("Switch IP address is missing... initialise using \"switch_ip=xx.xx.xx.xx\"")
-		
-		# Create a temp socket and use that to connect to the switch. This will identify to correct NIC to use for comms
-		# to the switch and get the address information needed
-		tmp_s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-		try:
-			tmp_s.connect((switch_ip, 9))
-			# Get the interface used by the socket.
-			self.local_ip = tmp_s.getsockname()[0]
-		except socket.error:
-			# Only return 127.0.0.1 if nothing else has been found.
-			self.local_ip = "127.0.0.1"
-		finally:
-			tmp_s.close()
+		self.local_ip = get_best_interface_for(switch_ip)
 
 		self.sock = create_socket(self.local_ip, 9989)
 		print(f'Using interface: {self.local_ip}')
@@ -43,8 +31,9 @@ class MulticastMgr:
 		mreq = struct.pack("4sl", socket.inet_aton(multicast_ip), socket.INADDR_ANY)
 		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, mreq)
 
-	def sniff_on_interface(self):
-			print("sniffing...")
+	def display_traffic(self):
+		while True: print(self.sock.recv(1))
+
 
 def create_socket(ip, port):
 	"""
@@ -73,34 +62,25 @@ def ip_is_local(ip_string):
 	
 	return re.match(combined_regex, ip_string) is not None # convert to a boolean
 
-def print_stream_info(my_socket):
+def print_stream_info(socket):
 
 	# Data waits on socket buffer until we retrieve it.
 	# NOTE: Normally, you would want to compare the incoming data's source address to your own, and filter it out
 	#       if it came from the current machine. Everything you send gets echoed back at you if your socket is
 	#       subscribed to the multicast group.
 
-	## USAGE IN CODE
-	# if print_stream_info(sock):
-	#     input('Press Enter to deregister interest and close socket: ')
-	#     sock.close()
-	#     print('\nSocket closed, \nMulticast packets will stop when your machine recieves the next IGMP Membership Query\n')
-	#     input('Press Enter to Exit')
-	#
-	# else:
-	#     sock.close()
-	#     print('\nSocket closed')
-	#     input('Press Enter to Exit')
+	# Test Var
+	multicast_ip = "239.1.2.3"
 
-	packet = my_socket.recvfrom(2624)
+	packet = socket.recvfrom(2624)
 
 	# packet tuple to string
 	packet = packet[0]
 
-	#Take first 20 characters as IP header
+	# Take first 20 characters as IP header
 	ip_header = packet[0:20]
  
-	iph = unpack('!BBHHHBBH4s4s' , ip_header)
+	iph = struct.unpack('!BBHHHBBH4s4s' , ip_header)
 
 	version_ihl = iph[0]
 	version = version_ihl >> 4
@@ -110,10 +90,10 @@ def print_stream_info(my_socket):
 
 	u = iph_length
 	udph_length = 8
-	udp_header = packet[u:u+8]
+	udp_header = packet[u:u+udph_length]
  
-	#now unpack them :)
-	udph = unpack('!HHHH' , udp_header)
+	# now unpack them :)
+	udph = struct.unpack('!HHHH' , udp_header)
 
 	source_port = udph[0]
 	dest_port = udph[1]

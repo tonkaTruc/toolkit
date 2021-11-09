@@ -21,4 +21,4 @@ def server_local_serve(c, port):
 
 @task
 def sniff(c):
-  mgr.sniff_on_interface()  
+  return False 
