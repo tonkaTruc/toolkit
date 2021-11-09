@@ -1,5 +1,6 @@
 from invoke import task, run
 from Toolkit.multicast import MulticastMgr
+from Toolkit.server import SimpleServer
 
 # Assign a manager by supplying the IP of the target switch device
 mgr = MulticastMgr(switch_ip="192.168.0.1")
@@ -13,6 +14,10 @@ def multicast_join(c, addr):
     while True: pass
   except KeyboardInterrupt:
     mgr.leave(addr)
+
+@task
+def server_local_serve(c, port):
+	SimpleServer("127.0.0.1", port).serve()
 
 @task
 def sniff(c):
