@@ -1,0 +1,80 @@
+import socket
+import re
+import sys
+from struct import *
+
+class MulticastMgr:
+
+	def __init__(self, switch_ip=None):
+
+		if not switch_ip: print("Switch IP address is missing... initialise using \"switch_ip=0.0.0.0\"")
+		
+		# Create a temp socket and use that to connect to the switch. This will identify to correct NIC to use for comms
+		# to the switch and get the address information needed
+		temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+		try:
+			temp_socket.connect((switch_ip, 9))
+			# Get the interface used by the socket.
+			self.local_ip = temp_socket.getsockname()[0]
+		except socket.error:
+			# Only return 127.0.0.1 if nothing else has been found.
+			self.local_ip = "127.0.0.1"
+		finally:
+			temp_socket.close()
+
+		self.sock = create_socket(self.local_ip, 9989)
+		print(f'Using interface: {self.local_ip}')
+		print(f'Created UDP socket: {self.sock}')
+
+		# set multicast interface to local_ip
+		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.local_ip))
+
+		# Set multicast time-to-live to 2...should keep our multicast packets from escaping the local network
+		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+
+	def join(self, multicast_ip):
+
+		# Construct a membership request...
+		membership_request = socket.inet_aton(multicast_ip) + socket.inet_aton(self.local_ip)
+
+		# Send add membership request to socket
+		# See http://www.tldp.org/HOWTO/Multicast-HOWTO-6.html for explanation of sockopts
+		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, membership_request)
+
+		try:
+			print(f'Multicast JOIN has been sent for {multicast_ip}. Entering while loop... Ctrl+C to exit and close socket.')
+			while True:
+				pass
+		except KeyboardInterrupt:
+			self.leave(multicast_ip)
+
+	def leave(self, multicast_ip):
+		# Construct a membership request...
+		membership_request = socket.inet_aton(multicast_ip) + socket.inet_aton(self.local_ip)
+		self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, membership_request)
+
+	def sniff_on_interface(self):
+			print("sniffing...")
+
+def create_socket(ip, port):
+	"""
+	Returns an open socket, bound to the NIC with given IP address.
+	@port is the port that is bound with the local ip address to create the socket
+	"""
+
+	# create UDP socket
+	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+	# allow reuse of addresses
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+	# If you bind to a specific interface on the Mac, no multicast data will arrive.
+	# If you try to bind to all interfaces on Windows, no multicast data will arrive.
+	# Hence the following.
+	if sys.platform.startswith("darwin"):
+		sock.bind(('0.0.0.0', port))
+	else:
+		sock.bind((ip, port))
+
+	return sock
