@@ -65,10 +65,8 @@ def ip_is_local(ip_string):
 def print_stream_info(socket):
 
   # Data waits on socket buffer until we retrieve it.
-  # NOTE: Normally, you would want to compare the incoming data's source address to your own, and filter it out
-  #       if it came from the current machine. Everything you send gets echoed back at you if your socket is
-  #       subscribed to the multicast group.
-
+  # TODO: filter it out traffic if it came from the current machine.
+  
   # Test Var
   multicast_ip = "239.1.2.3"
 
