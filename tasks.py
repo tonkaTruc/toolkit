@@ -1,8 +1,8 @@
-from invoke import task
+from invoke.tasks import task
 
-from Toolkit.capture import CaptureMgr
-from Toolkit.multicast import MulticastMgr
-from Toolkit.server import SimpleServer
+from ttk.network.multicast import MulticastMgr
+from ttk.network.packet.capture import CaptureMgr
+from ttk.network.server import SimpleServer
 
 
 @task
