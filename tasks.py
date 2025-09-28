@@ -1,9 +1,11 @@
+import os
+
 from invoke.tasks import task
 
 from ttk.network.interfaces import create_interfaces_dict
+from ttk.network.packet.capture import PackerCaptor
 
 # from ttk.network.multicast import MulticastMgr
-# from ttk.network.packet.capture import CaptureMgr
 # from ttk.network.server import SimpleServer
 
 
@@ -14,6 +16,21 @@ def list_interfaces(c):
     for iface, info in create_interfaces_dict().items():
         print(f"{iface}: {[x['address'] for x in info['addresses']]}")
 
+
+@task
+def print_traffic(c, interface=None, count=20):
+    """Capture network traffic on a specified interface"""
+
+    if os.geteuid() != 0:
+        print("Warning: This task requires root to access network interfaces.")
+        return
+
+    print(f"Capturing {count} packets on {interface}")
+    open_hole = PackerCaptor(capture_int=interface)
+    pkts = open_hole.capture_traffic(count=count)
+
+    for pkt in pkts:
+        print(pkt.summary())
 
 
 # @task
@@ -36,14 +53,3 @@ def list_interfaces(c):
 # def server_local_serve(c, port):
 #     """ Serves a basic connection point to localhost on a given port"""
 #     SimpleServer("127.0.0.1", port).serve()
-
-
-# @task
-# def capture(c, interface=None, count=20):
-#     """Capture network traffic on a specified interface"""
-
-#     cap = CaptureMgr(capture_int=interface)
-#     try:
-#         cap.capture(count=count)
-#     except KeyboardInterrupt:
-#         quit()
