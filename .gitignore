@@ -1,8 +1,13 @@
+# IDE-specific files
 .idea/
-.vscode
-.save
-*.pyc
-venv/
-cap_store/AM824initialset
-cap_store/PMDinitialset
+.vscode/
 
+# Backup and temporary files
+.save
+
+# Python bytecode files
+*.pyc
+
+# Environment
+venv/
+.python-version
