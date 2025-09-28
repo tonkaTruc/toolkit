@@ -3,7 +3,7 @@ import socket
 
 from scapy.all import sniff
 
-from .utils import get_interface_info
+from ttk.network.interfaces import get_best_interface_for
 
 
 class CaptureMgr:
@@ -11,7 +11,7 @@ class CaptureMgr:
     def __init__(self, capture_int=None):
         self.log = logging.getLogger("__name__")
         self.log.info(60*"*" + " Configure a capture interface:")
-        self.interface_cap = get_interface_info(capture_int)
+        self.interface_cap = get_best_interface_for(capture_int)
         self.hostname = socket.gethostname()
         self.log.info(f"{self.hostname}: {self.interface_cap}")
 
