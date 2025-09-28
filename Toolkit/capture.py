@@ -18,6 +18,6 @@ class CaptureMgr:
     def capture(self, count=None):
         sniff(
             iface=self.interface_cap['name'],
-            count=count, 
+            count=count,
             prn=lambda x: x.summary()
         )
