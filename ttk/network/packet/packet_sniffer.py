@@ -1,7 +1,10 @@
-import threading, socket, struct, os, array
-from scapy.all import ETH_P_ALL
-from scapy.all import select
-from scapy.all import MTU
+import array
+import os
+import socket
+import struct
+import threading
+
+from scapy.all import ETH_P_ALL, MTU, select
 
 
 class PacketSniffer(threading.Thread):
@@ -85,7 +88,6 @@ if __name__ == "__main__":
         print("incoming - src: %s \tdst: %s \tframe len: %d" % socket.inet_ntoa(src), socket.inet_ntoa(dst),
               len(frame))
 
-
     def outgoing(src, dst, frame):
         print("outgoing - src: %s \tdst: %s \tframe len: %d" % socket.inet_ntoa(src), socket.inet_ntoa(dst),
               len(frame))
@@ -102,6 +104,4 @@ if __name__ == "__main__":
     for thread in threads:
         print("Allowing threaded packet sniffer to join: %s" % thread)
         thread.join()
-
-
 

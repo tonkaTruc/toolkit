@@ -1,10 +1,11 @@
-from custom_headers.PTP import *
-from custom_headers.erspan import *
-from scapy.all import *
-import numpy as np
-import sys
-import matplotlib.pyplot as plt
 import json
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+from custom_headers.erspan import *
+from custom_headers.PTP import *
+from scapy.all import *
 
 # ERSPAN timestamp wrapping
 erspan_wrap_count = 0
