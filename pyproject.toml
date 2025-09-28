@@ -1,5 +1,5 @@
 [project]
-name = "toolkit"
+name = "tonka-toolkit"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,5 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "invoke>=2.2.0",
     "netifaces>=0.11.0",
+    "pytest>=8.4.2",
     "scapy>=2.6.1",
 ]
