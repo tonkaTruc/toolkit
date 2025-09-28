@@ -1,4 +1,4 @@
-from invoke import run, task
+from invoke import task
 
 from Toolkit.capture import CaptureMgr
 from Toolkit.multicast import MulticastMgr
